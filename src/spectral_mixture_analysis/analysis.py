@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Dict
+from pathlib import Path
 
 import numpy as np
 
@@ -96,8 +97,8 @@ def evaluate_dataset_pairs(
         metrics = evaluate_mixture_linearity_stft(x, y)
 
         results.append({
-            "file_x": str(path_x),
-            "file_y": str(path_y),
+            "file_x": str(Path(path_x).stem),
+            "file_y": str(Path(path_y).stem),
             **metrics,
         })
 
