@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, List, Tuple
 from pathlib import Path
+import pandas as pd
 
 import numpy as np
 
@@ -9,6 +10,8 @@ from .transforms import (
     compute_stft_complex,
     magnitude_spectrogram,
 )
+from .metrics import spectral_overlap
+
 from .metrics import l2_error, relative_l2_error, mean_absolute_error
 
 
@@ -65,8 +68,37 @@ def evaluate_mixture_linearity_stft(
         "mae": mae,
     }
 
-from typing import List, Tuple
-import pandas as pd
+
+def evaluate_with_overlap(x, y, n_fft=2048, hop_length=512):
+    if len(x) != len(y):
+        raise ValueError("Signals must have the same length")
+
+    mixture = x + y
+
+    X = compute_stft_complex(x, n_fft=n_fft, hop_length=hop_length)
+    Y = compute_stft_complex(y, n_fft=n_fft, hop_length=hop_length)
+    M = compute_stft_complex(mixture, n_fft=n_fft, hop_length=hop_length)
+
+    mag_x = magnitude_spectrogram(X)
+    mag_y = magnitude_spectrogram(Y)
+    mag_mix = magnitude_spectrogram(M)
+
+    mag_sum = mag_x + mag_y
+
+    # métricas
+    l2 = np.linalg.norm(mag_mix - mag_sum)
+    rel_l2 = l2 / (np.linalg.norm(mag_mix) + 1e-12)
+    mae = np.mean(np.abs(mag_mix - mag_sum))
+
+    overlap = spectral_overlap(mag_x, mag_y)
+
+    return {
+        "l2": l2,
+        "relative_l2": rel_l2,
+        "mae": mae,
+        "overlap": overlap,
+    }
+
 
 from .audio import load_mono_audio, match_length
 
