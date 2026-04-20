@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 from typing import Any, Literal
 
 import librosa
@@ -7,6 +9,32 @@ import numpy as np
 
 
 TransformType = Literal["stft", "mel", "nsgt"]
+
+
+def _import_nsgt3() -> Any:
+    # Try the environment first (user set PYTHONPATH or installed the package).
+    try:
+        import nsgt3
+        return nsgt3
+    except ImportError:
+        pass
+
+    # Fall back to the co-located variational-timbre repository.
+    # Assumes both repos sit under the same parent directory.
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _candidate = os.path.normpath(os.path.join(_here, "../../../variational-timbre"))
+    if os.path.isdir(os.path.join(_candidate, "nsgt3")) and _candidate not in sys.path:
+        sys.path.insert(0, _candidate)
+    try:
+        import nsgt3
+        return nsgt3
+    except ImportError:
+        raise ImportError(
+            "nsgt3 could not be imported. Add the variational-timbre repo to "
+            "PYTHONPATH, e.g.:  export PYTHONPATH=/path/to/variational-timbre"
+        )
+
+
 StftOutputType = Literal["complex", "magnitude", "power"]
 
 
@@ -178,6 +206,63 @@ def representation_to_db(
     raise ValueError(f"Unsupported scale type: {scale}")
 
 
+def compute_nsgt_representation(
+    audio: np.ndarray,
+    sr: int,
+    fmin: float = 30.0,
+    fmax: float = 11000.0,
+    bins: int = 48,
+    scale: str = "oct",
+) -> np.ndarray:
+    """
+    Compute NSGT magnitude spectrogram using the nsgt3 library.
+
+    Args:
+        audio: Input mono audio signal.
+        sr: Sampling rate.
+        fmin: Minimum frequency in Hz.
+        fmax: Maximum frequency in Hz.
+        bins: Frequency bins per octave (for 'oct'/'log') or total bins (for 'mel').
+        scale: Frequency scale — one of 'oct', 'log', 'mel'.
+
+    Returns:
+        Magnitude spectrogram, shape (n_freqs, n_frames).
+        Same shape convention as compute_stft_representation(output='magnitude').
+
+    Notes:
+        matrixform=True forces all frequency bands to share the same number of
+        time frames, which is what allows a clean 2D numpy array output.
+        reducedform=1 + real=True keeps only the positive-frequency half,
+        mirroring librosa's STFT behaviour for real signals.
+    """
+    nsgt3 = _import_nsgt3()
+
+    scale_map = {
+        "oct": nsgt3.OctScale,
+        "log": nsgt3.LogScale,
+        "mel": nsgt3.MelScale,
+    }
+    if scale not in scale_map:
+        raise ValueError(f"Unsupported NSGT scale: {scale!r}. Use 'oct', 'log', or 'mel'.")
+
+    scl = scale_map[scale](fmin, fmax, bins)
+
+    # Ls must be known at construction time; we take it from the signal.
+    nsgt = nsgt3.NSGT(
+        scl,
+        sr,
+        len(audio),
+        real=True,
+        matrixform=True,  # rectangular output — required for np.array conversion
+        reducedform=1,    # positive frequencies only (real signal)
+    )
+
+    # forward() yields complex arrays, one per frequency band.
+    # With matrixform=True all bands have equal length → clean (n_freqs, n_frames) array.
+    coeffs = np.array(list(nsgt.forward(audio)))  # complex, (n_freqs, n_frames)
+    return np.abs(coeffs)  # magnitude, float, (n_freqs, n_frames)
+
+
 def compute_representation(
     audio: np.ndarray,
     sr: int,
@@ -190,7 +275,7 @@ def compute_representation(
     Supported transform types:
         - 'stft'
         - 'mel'
-        - 'nsgt' (placeholder for future implementation)
+        - 'nsgt'
 
     Args:
         audio: Input mono audio signal.
@@ -208,9 +293,6 @@ def compute_representation(
         return compute_mel_spectrogram(audio=audio, sr=sr, **kwargs)
 
     if transform_type == "nsgt":
-        raise NotImplementedError(
-            "NSGT support has not been implemented yet. "
-            "Add compute_nsgt_representation() when ready."
-        )
+        return compute_nsgt_representation(audio=audio, sr=sr, **kwargs)
 
     raise ValueError(f"Unsupported transform_type: {transform_type}")
