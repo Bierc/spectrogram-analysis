@@ -1,6 +1,6 @@
 # Spectral Representation Analysis under Audio Mixture
 
-## 🎯 Objective
+## Objective
 
 This project investigates how different spectral representations behave under signal mixture. Specifically, we compare:
 
@@ -11,7 +11,7 @@ The goal is to analyze the limitations of linearity in spectral domains and unde
 
 ---
 
-## 🧠 Motivation
+## Motivation
 
 In the time domain, audio signals combine linearly:
 
@@ -27,7 +27,7 @@ Understanding these discrepancies is important for:
 
 ---
 
-## 🔬 Research Questions
+## Research Questions
 
 1. How different are T(x + y) and T(x) + T(y)?
 2. Do some representations preserve linearity better than others?
@@ -35,7 +35,7 @@ Understanding these discrepancies is important for:
 
 ---
 
-## 🧪 Methodology
+## Methodology
 
 ### Step 1 — Data
 - Select two audio signals: x and y
@@ -45,8 +45,7 @@ Understanding these discrepancies is important for:
 Evaluate multiple spectral transforms:
 - STFT
 - Mel Spectrogram
-- NSGT (if feasible)
-
+- NSGT
 ### Step 3 — Comparison
 
 For each transform T:
@@ -64,7 +63,7 @@ For each transform T:
 
 ---
 
-## 📊 Expected Analysis
+## Expected Analysis
 
 - Identify deviations from linearity
 - Compare behavior across representations
@@ -75,7 +74,7 @@ For each transform T:
 
 ---
 
-## ⚙️ Implementation Plan
+## Implementation Plan
 
 ### Phase 1
 - Implement STFT pipeline
@@ -91,22 +90,6 @@ For each transform T:
 
 ---
 
-## 📅 Timeline
-
-- Early April: Initial experiments (STFT, mel)
-- Mid April: NSGT + analysis
-- Late April: Writing and consolidation
-
----
-
-## 🚧 Current Status
-
-- Project initialized
-- Problem and methodology defined
-- Implementation starting
-
----
-
-## 📌 Notes
+## Notes
 
 This project focuses on analysis rather than building full separation models. The goal is to understand structural properties of spectral representations.
